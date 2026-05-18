@@ -1,0 +1,9 @@
+[project]
+name = "lscli"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "lxml>=6.1.0",
+    "regex>=2026.5.9",
+]
