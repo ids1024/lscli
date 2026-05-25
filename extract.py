@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
+# reg, sic
+
 import lxml.etree
 import json
 import os
 import sys
 import sqlite3
 
-import beta_to_unicode
-
-XML_PATH = "lexica/CTS_XML_TEI/perseus/pdllex/lat/ls/lat.ls.perseus-eng1.xml"
+XML_PATH = "lexica/CTS_XML_TEI/perseus/pdllex/lat/ls/lat.ls.perseus-eng2.xml"
 LAT_GRK = dict(zip("abgdez", "αβγδεζ"))
 
 if len(sys.argv) > 1 and sys.argv[1] == "--android":
@@ -29,8 +29,6 @@ else:
     NL = '\n'
     SPACE = '  '
 
-betacode_replacer = beta_to_unicode.Replacer()
-
 def xml2str(xml, level=0):
     if xml.tag == "sense":
         level = int(xml.get("level"))
@@ -50,7 +48,7 @@ def xml2str(xml, level=0):
     elif xml.tag == "hi" and xml.get("rend") == "ital":
         return ITALIC + contents + UNITALIC + tail
     elif xml.tag == "foreign" and xml.get("lang") == "greek":
-        return betacode_replacer.beta_code(contents.upper()) + tail
+        return contents.upper() + tail
     elif xml.tag == "cit":
         if tail.endswith(': '):
             tail = tail.rstrip(': ')
@@ -60,6 +58,14 @@ def xml2str(xml, level=0):
     else:
         return contents + tail
 
+def orth2str(xml):
+    contents = (xml.text or '') + ''.join(orth2str(i) for i in xml)
+    tail = xml.tail or ''
+
+    if xml.tag in ("orth", "reg", "sic", "corr"):
+        return contents + tail
+    else:
+        sys.exit(f"Unexpected tag '{xml.tag}' in orth");
 
 if os.path.exists(DBNAME):
     os.remove(DBNAME)
@@ -78,7 +84,7 @@ with sqlite3.connect(DBNAME) as conn:
         key = key.replace('j', 'i').replace('v', 'u')
 
         assert entry[0].tag == "orth"
-        word = entry[0].text.replace('-', '')
+        word = orth2str(entry[0]).replace('-', '')
 
         assert entry.text is None # May as well assert instead of just assuming this
         value = ''.join(map(xml2str, entry)) + (entry.tail or '')
